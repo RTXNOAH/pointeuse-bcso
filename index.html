@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Pointeuse BCSO</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #38bdf8;
+    }
+
+    input {
+      padding: 10px;
+      margin: 10px;
+      border-radius: 8px;
+      border: none;
+      width: 200px;
+    }
+
+    button {
+      padding: 12px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .in { background: #22c55e; color: white; }
+    .out { background: #ef4444; color: white; }
+    .reset { background: #64748b; color: white; }
+
+    #log {
+      margin-top: 20px;
+      background: #1e293b;
+      padding: 15px;
+      border-radius: 10px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+      text-align: left;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🕒 Pointeuse BCSO</h1>
+
+<input type="text" id="name" placeholder="Nom de l'employé">
+
+<br>
+
+<button class="in" onclick="pointer('ENTREE')">Entrée</button>
+<button class="out" onclick="pointer('SORTIE')">Sortie</button>
+<button class="reset" onclick="reset()">Reset</button>
+
+<div id="log"></div>
+
+<script>
+let logs = JSON.parse(localStorage.getItem("bcso_logs")) || [];
+
+function formatTime(ms) {
+  let h = Math.floor(ms / 3600000);
+  let m = Math.floor((ms % 3600000) / 60000);
+  return h + "h " + m + "min";
+}
+
+function pointer(type) {
+  let name = document.getElementById("name").value.trim();
+  if (!name) {
+    alert("Entre un nom !");
+    return;
+  }
+
+  let now = new Date();
+  logs.push({
+    name: name,
+    type: type,
+    time: now.getTime()
+  });
+
+  localStorage.setItem("bcso_logs", JSON.stringify(logs));
+  afficher();
+}
+
+function reset() {
+  if (confirm("Tout effacer ?")) {
+    logs = [];
+    localStorage.removeItem("bcso_logs");
+    afficher();
+  }
+}
+
+function afficher() {
+  let html = "<h3>Historique</h3>";
+  let lastIn = {};
+
+  logs.forEach(l => {
+    let date = new Date(l.time).toLocaleString();
+
+    if (l.type === "ENTREE") {
+      lastIn[l.name] = l.time;
+      html += `<p>🟢 ${l.name} - Entrée : ${date}</p>`;
+    } else {
+      let duration = "";
+      if (lastIn[l.name]) {
+        let diff = l.time - lastIn[l.name];
+        duration = " (" + formatTime(diff) + ")";
+      }
+      html += `<p>🔴 ${l.name} - Sortie : ${date}${duration}</p>`;
+    }
+  });
+
+  document.getElementById("log").innerHTML = html;
+}
+
+afficher();
+</script>
+
+</body>
+</html>
