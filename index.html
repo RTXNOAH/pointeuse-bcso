@@ -1,128 +1,189 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Pointeuse BCSO</title>
+<meta charset="UTF-8">
+<title>Pointeuse BCSO</title>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: Arial;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: white;
+  text-align: center;
+}
 
-    h1 {
-      color: #38bdf8;
-    }
+/* 👤 Profil en haut à gauche */
+#profil {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  text-align: left;
+  background: rgba(255,255,255,0.05);
+  padding: 10px;
+  border-radius: 10px;
+}
 
-    input {
-      padding: 10px;
-      margin: 10px;
-      border-radius: 8px;
-      border: none;
-      width: 200px;
-    }
+input {
+  padding: 8px;
+  margin: 3px;
+  border-radius: 6px;
+  border: none;
+}
 
-    button {
-      padding: 12px 20px;
-      margin: 10px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
 
-    .in { background: #22c55e; color: white; }
-    .out { background: #ef4444; color: white; }
-    .reset { background: #64748b; color: white; }
+.save {
+  background: #38bdf8;
+  color: white;
+}
 
-    #log {
-      margin-top: 20px;
-      background: #1e293b;
-      padding: 15px;
-      border-radius: 10px;
-      max-width: 400px;
-      margin-left: auto;
-      margin-right: auto;
-      text-align: left;
-    }
-  </style>
+.toggle {
+  width: 80px;
+  height: 40px;
+  background: red;
+  border-radius: 20px;
+  margin: 20px auto;
+  position: relative;
+  cursor: pointer;
+}
+
+.circle {
+  width: 30px;
+  height: 30px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  transition: 0.3s;
+}
+
+.active {
+  background: green;
+}
+
+.active .circle {
+  left: 45px;
+}
+
+#log {
+  margin-top: 30px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  background: rgba(255,255,255,0.05);
+  padding: 15px;
+  border-radius: 10px;
+  text-align: left;
+}
+</style>
+
 </head>
-
 <body>
+
+<!-- 👤 PROFIL -->
+<div id="profil">
+  <input id="nom" placeholder="Nom"><br>
+  <input id="prenom" placeholder="Prénom"><br>
+  <input id="matricule" placeholder="Matricule"><br>
+  <button class="save" onclick="saveUser()">Enregistrer</button>
+
+  <div id="afficheUser"></div>
+</div>
 
 <h1>🕒 Pointeuse BCSO</h1>
 
-<input type="text" id="name" placeholder="Nom de l'employé">
+<div id="status">Hors service</div>
 
-<br>
+<div id="toggle" class="toggle" onclick="pointer()">
+  <div class="circle"></div>
+</div>
 
-<button class="in" onclick="pointer('ENTREE')">Entrée</button>
-<button class="out" onclick="pointer('SORTIE')">Sortie</button>
-<button class="reset" onclick="reset()">Reset</button>
+<div id="heures">Heures totales : 0 min</div>
 
 <div id="log"></div>
 
 <script>
-let logs = JSON.parse(localStorage.getItem("bcso_logs")) || [];
+let actif = false;
+let debut = null;
+let total = 0;
 
-function formatTime(ms) {
-  let h = Math.floor(ms / 3600000);
-  let m = Math.floor((ms % 3600000) / 60000);
-  return h + "h " + m + "min";
+let logs = JSON.parse(localStorage.getItem("logs")) || [];
+
+function saveUser() {
+  let user = {
+    nom: document.getElementById("nom").value,
+    prenom: document.getElementById("prenom").value,
+    matricule: document.getElementById("matricule").value
+  };
+
+  localStorage.setItem("user", JSON.stringify(user));
+  afficherUser();
 }
 
-function pointer(type) {
-  let name = document.getElementById("name").value.trim();
-  if (!name) {
-    alert("Entre un nom !");
-    return;
-  }
+function afficherUser() {
+  let user = JSON.parse(localStorage.getItem("user"));
+  if (!user) return;
 
+  document.getElementById("afficheUser").innerHTML =
+    `<b>${user.prenom} ${user.nom}</b><br>Matricule: ${user.matricule}`;
+}
+
+function pointer() {
   let now = new Date();
-  logs.push({
-    name: name,
-    type: type,
-    time: now.getTime()
-  });
 
-  localStorage.setItem("bcso_logs", JSON.stringify(logs));
-  afficher();
-}
+  if (!actif) {
+    debut = now;
+    document.getElementById("status").innerText = "En service";
+    document.getElementById("toggle").classList.add("active");
+    actif = true;
+  } else {
+    let fin = now;
+    let diff = Math.floor((fin - debut) / 60000);
+    total += diff;
 
-function reset() {
-  if (confirm("Tout effacer ?")) {
-    logs = [];
-    localStorage.removeItem("bcso_logs");
+    logs.push({
+      debut: debut.toLocaleString(),
+      fin: fin.toLocaleString(),
+      duree: diff
+    });
+
+    localStorage.setItem("logs", JSON.stringify(logs));
+
+    document.getElementById("status").innerText = "Hors service";
+    document.getElementById("toggle").classList.remove("active");
+    actif = false;
+
     afficher();
   }
+
+  document.getElementById("heures").innerText =
+    "Heures totales : " + total + " min";
 }
 
 function afficher() {
   let html = "<h3>Historique</h3>";
-  let lastIn = {};
 
-  logs.forEach(l => {
-    let date = new Date(l.time).toLocaleString();
-
-    if (l.type === "ENTREE") {
-      lastIn[l.name] = l.time;
-      html += `<p>🟢 ${l.name} - Entrée : ${date}</p>`;
-    } else {
-      let duration = "";
-      if (lastIn[l.name]) {
-        let diff = l.time - lastIn[l.name];
-        duration = " (" + formatTime(diff) + ")";
-      }
-      html += `<p>🔴 ${l.name} - Sortie : ${date}${duration}</p>`;
-    }
+  logs.slice().reverse().forEach(l => {
+    html += `
+      <p>
+      🟢 Début : ${l.debut}<br>
+      🔴 Fin : ${l.fin}<br>
+      ⏱️ ${l.duree} min
+      </p><hr>`;
   });
 
   document.getElementById("log").innerHTML = html;
 }
 
+afficherUser();
 afficher();
 </script>
 
